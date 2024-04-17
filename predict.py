@@ -123,15 +123,21 @@ def main():
         for img_path in tqdm(image_files):
             ext = os.path.basename(img_path).split('.')[-1]
             img_name = os.path.basename(img_path)[:-len(ext)-1]
-            img = Image.open(img_path).convert('RGB')
-            img = transform(img).unsqueeze(0) # To tensor of NCHW
+            rgb_img = Image.open(img_path).convert('RGB')
+            
+            img = transform(rgb_img).unsqueeze(0) # To tensor of NCHW
             img = img.to(device)
             
             pred = model(img).max(1)[1].cpu().numpy()[0] # HW
+            #print(np.histogram(pred, bins=19))
             colorized_preds = decode_fn(pred).astype('uint8')
             colorized_preds = Image.fromarray(colorized_preds)
             if opts.save_val_results_to:
                 colorized_preds.save(os.path.join(opts.save_val_results_to, img_name+'.png'))
+                alpha = Image.fromarray(np.array(pred).astype('uint8'))
+                rgba_img = Image.merge('RGBA', rgb_img.split() + (alpha, ))
+                #print(np.array(rgba_img))
+                rgba_img.save(os.path.join(opts.save_val_results_to, img_name + '_segmented.png'))
 
 if __name__ == '__main__':
     main()
